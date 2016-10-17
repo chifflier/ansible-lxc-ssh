@@ -37,6 +37,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+SSHPASS_AVAILABLE = None
 
 class Connection(ConnectionBase):
     transport = 'lxc_ssh'
@@ -54,6 +55,24 @@ class Connection(ConnectionBase):
         #self.container_name = self.ssh._play_context.remote_addr
         self.container_name = self._play_context.ssh_extra_args # XXX
         #self.container = None
+        
+    @staticmethod
+    def _sshpass_available():
+        global SSHPASS_AVAILABLE
+
+        # We test once if sshpass is available, and remember the result. It
+        # would be nice to use distutils.spawn.find_executable for this, but
+        # distutils isn't always available; shutils.which() is Python3-only.
+
+        if SSHPASS_AVAILABLE is None:
+            try:
+                p = subprocess.Popen(["sshpass"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p.communicate()
+                SSHPASS_AVAILABLE = True
+            except OSError:
+                SSHPASS_AVAILABLE = False
+
+        return SSHPASS_AVAILABLE
 
     @staticmethod
     def _persistence_controls(command):
@@ -97,6 +116,14 @@ class Connection(ConnectionBase):
 
     def _build_command(self, binary, *other_args):
         self._command = []
+        
+        if self._play_context.password:
+            if not self._sshpass_available():
+                raise AnsibleError("to use the 'ssh' connection type with passwords, you must install the sshpass program")
+
+            self.sshpass_pipe = os.pipe()
+            self._command += [b'sshpass', b'-d' + to_bytes(self.sshpass_pipe[0], nonstring='simplerepr', errors='surrogate_or_strict')]
+            
         self._command += [binary]
         self._command += ['-C']
         if self._play_context.verbosity > 3:
@@ -104,6 +131,7 @@ class Connection(ConnectionBase):
         elif binary == 'ssh':
             # Older versions of ssh (e.g. in RHEL 6) don't accept sftp -q.
             self._command += ['-q']
+
         # Next, we add [ssh_connection]ssh_args from ansible.cfg.
         if self._play_context.ssh_args:
             args = self._split_args(self._play_context.ssh_args)
