@@ -29,7 +29,13 @@ from ansible import constants as C
 from ansible.compat.six import text_type, binary_type
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.path import unfrackpath, makedirs_safe
-from ansible.utils.unicode import to_bytes, to_unicode, to_str
+
+from ansible.release import __version__ as ansible_version
+from distutils.version import LooseVersion
+if LooseVersion(ansible_version) >= LooseVersion('2.2.0.0'):
+    from ansible.module_utils._text import to_bytes, to_text as to_unicode, to_native as to_str
+else:
+    from ansible.utils.unicode import to_bytes, to_unicode, to_str
 
 try:
     from __main__ import display
