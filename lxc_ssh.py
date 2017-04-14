@@ -27,6 +27,7 @@ import subprocess
 
 from ansible import constants as C
 from ansible.compat.six import text_type, binary_type
+from ansible.errors import AnsibleError
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.path import unfrackpath, makedirs_safe
 from ansible.utils.unicode import to_bytes, to_unicode, to_str
