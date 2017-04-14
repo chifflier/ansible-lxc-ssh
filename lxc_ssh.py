@@ -24,10 +24,11 @@ import pty
 import select
 import shlex
 import subprocess
+import sys
 
 from ansible import constants as C
 from ansible.compat.six import text_type, binary_type
-from ansible.errors import AnsibleError
+from ansible.errors import AnsibleConnectionFailure, AnsibleError
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.path import unfrackpath, makedirs_safe
 
