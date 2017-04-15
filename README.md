@@ -41,6 +41,50 @@ applied. It also works with LXC version 1 (using `lxc-*`) and LXC version 2 (jus
 a single `lxc` binary). The version is autodetected on runtime.
 
 
+## How to create a container
+
+The following is an extract from a Playbook which creates a container. First the hosts.cfg:
+
+```
+[containers]
+web ansible_host=physical.host ansible_ssh_extra_args=web
+```
+
+The Playbook:
+
+```
+# deploy the container
+- hosts: containers
+  become: yes
+  # the container is not up, nothing to gather here
+  gather_facts: False
+  # files on the host system are changed,
+  # creating multiple containers in parallel might cause a race condition
+  serial: 1
+
+  tasks:
+  - name: Create LXD Container
+    become: True
+    lxd_container:
+      name: "{{ inventory_name }}"
+      state: started
+      source:
+        type: image
+        mode: pull
+        server: https://cloud-images.ubuntu.com/releases
+        protocol: simplestreams
+        alias: 16.10/amd64
+      profiles: ['default']
+      wait_for_ipv4_addresses: true
+      timeout: 600
+    register: container_setup
+    delegate_to: "{{ ansible_host }}"
+    #delegate_facts: True
+```
+
+The actual container creation is redirected to the `ansible_host`, also fact gathering is turned off because the container is not yet live. It might be a good idea to create the containers one by one, hence the serialization. In my case I also setup ssh access and hostname resolution during the container setup - this does not work well when run in parallel for multiple containers.
+
+
 ## notes
 
 *     I haven't found any proper method to access the 'inventory_name' from the connection plugin, so I used 'ansible_ssh_extra_args' to store the name of the container.
