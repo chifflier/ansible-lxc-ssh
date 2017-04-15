@@ -54,6 +54,22 @@ class Connection(ConnectionBase):
         #print kwargs
         super(Connection, self).__init__(play_context, new_stdin, *args, **kwargs)
         self.host=self._play_context.remote_addr
+        self.lxc_version = None
+
+        # LXC v1 uses 'lxc-info', 'lxc-attach' and so on
+        # LXC v2 uses just 'lxc'
+        (returncode2, stdout2, stderr2) = self._exec_command("which lxc", None, False)
+        (returncode1, stdout1, stderr1) = self._exec_command("which lxc-info", None, False)
+        if (returncode2 == 0):
+            self.lxc_version = 2
+            display.vvv('LXC v2')
+        elif (returncode1 == 0):
+            self.lxc_version = 2
+            display.vvv('LXC v1')
+        else:
+            raise AnsibleConnectionFailure('Cannot identify LXC version')
+            sys.exit(1)
+
 
     def _connect(self):
         ''' connect to the lxc; nothing to do here '''
@@ -534,9 +550,14 @@ class Connection(ConnectionBase):
         #print( vm )
         #raise "blah"
         h = self.container_name
-        lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
-                % (pipes.quote(h),
-                   pipes.quote(cmd))
+        if (self.lxc_version == 2):
+            lxc_cmd = 'lxc exec %s -- /bin/sh -c %s'  \
+                    % (pipes.quote(h),
+                       pipes.quote(cmd))
+        elif (self.lxc_version == 1):
+            lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
+                    % (pipes.quote(h),
+                       pipes.quote(cmd))
         if in_data:
             cmd = self._build_command('ssh', self.host, lxc_cmd)
         else:
@@ -557,9 +578,14 @@ class Connection(ConnectionBase):
             in_data = in_f.read()
             cmd = ('cat > %s; echo -n done' % pipes.quote(out_path))
             h = self.container_name
-            lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
-                    % (pipes.quote(h),
-                       pipes.quote(cmd))
+            if (self.lxc_version == 2):
+                lxc_cmd = 'lxc exec %s -- /bin/sh -c %s'  \
+                        % (pipes.quote(h),
+                           pipes.quote(cmd))
+            elif (self.lxc_version == 1):
+                lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
+                        % (pipes.quote(h),
+                           pipes.quote(cmd))
             if in_data:
                 cmd = self._build_command('ssh', self.host, lxc_cmd)
             else:
@@ -574,9 +600,14 @@ class Connection(ConnectionBase):
         super(Connection, self).fetch_file(in_path, out_path)
         cmd = ('cat %s' % pipes.quote(in_path))
         h = self.container_name
-        lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
-                % (pipes.quote(h),
-                   pipes.quote(cmd))
+        if (self.lxc_version == 2):
+            lxc_cmd = 'lxc exec %s -- /bin/sh -c %s'  \
+                    % (pipes.quote(h),
+                       pipes.quote(cmd))
+        elif (self.lxc_version == 1):
+            lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
+                    % (pipes.quote(h),
+                       pipes.quote(cmd))
         in_data = None
         if in_data:
             cmd = self._build_command('ssh', self.host, lxc_cmd)
