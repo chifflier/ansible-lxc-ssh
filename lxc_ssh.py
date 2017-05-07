@@ -551,7 +551,7 @@ class Connection(ConnectionBase):
         #raise "blah"
         h = self.container_name
         if (self.lxc_version == 2):
-            lxc_cmd = 'lxc exec %s -- /bin/sh -c %s'  \
+            lxc_cmd = 'lxc exec %s --mode=non-interactive -- /bin/sh -c %s'  \
                     % (pipes.quote(h),
                        pipes.quote(cmd))
         elif (self.lxc_version == 1):
@@ -579,7 +579,7 @@ class Connection(ConnectionBase):
             cmd = ('cat > %s; echo -n done' % pipes.quote(out_path))
             h = self.container_name
             if (self.lxc_version == 2):
-                lxc_cmd = 'lxc exec %s -- /bin/sh -c %s'  \
+                lxc_cmd = 'lxc exec %s --mode=non-interactive -- /bin/sh -c %s'  \
                         % (pipes.quote(h),
                            pipes.quote(cmd))
             elif (self.lxc_version == 1):
@@ -601,7 +601,7 @@ class Connection(ConnectionBase):
         cmd = ('cat %s' % pipes.quote(in_path))
         h = self.container_name
         if (self.lxc_version == 2):
-            lxc_cmd = 'lxc exec %s -- /bin/sh -c %s'  \
+            lxc_cmd = 'lxc exec %s --mode=non-interactive -- /bin/sh -c %s'  \
                     % (pipes.quote(h),
                        pipes.quote(cmd))
         elif (self.lxc_version == 1):
