@@ -64,7 +64,7 @@ class Connection(ConnectionBase):
             self.lxc_version = 2
             display.vvv('LXC v2')
         elif (returncode1 == 0):
-            self.lxc_version = 2
+            self.lxc_version = 1
             display.vvv('LXC v1')
         else:
             raise AnsibleConnectionFailure('Cannot identify LXC version')
