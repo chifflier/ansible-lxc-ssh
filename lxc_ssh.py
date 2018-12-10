@@ -1164,7 +1164,12 @@ class Connection(ConnectionBase):
 
         with open(in_path,'r') as in_f:
             in_data = in_f.read()
-            cmd = ('cat > %s; echo -n done' % pipes.quote(out_path))
+            if (len(in_data) == 0):
+                # define a shortcut for empty files - nothing ro read so the ssh pipe will hang
+                cmd = ('touch %s; echo -n done' % pipes.quote(out_path))
+            else:
+                # regular command
+                cmd = ('cat > %s; echo -n done' % pipes.quote(out_path))
             h = self.container_name
             if (self.lxc_version == 2):
                 lxc_cmd = 'lxc exec %s --mode=non-interactive -- /bin/sh -c %s'  \
