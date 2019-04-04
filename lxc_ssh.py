@@ -293,7 +293,7 @@ class Connection(ConnectionBase):
                 self._add_args(
                     "ansible_password/ansible_ssh_pass not set", (
                         "-o", "KbdInteractiveAuthentication=no",
-                        "-o", "PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey",
+                        "-o", "PreferredAuthentications=publickey,gssapi-with-mic,gssapi-keyex,hostbased",
                         "-o", "PasswordAuthentication=no"
                     )
                 )
@@ -362,7 +362,7 @@ class Connection(ConnectionBase):
                 self._add_args(
                     b_command, (
                         b"-o", b"KbdInteractiveAuthentication=no",
-                        b"-o", b"PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey",
+                        b"-o", b"PreferredAuthentications=publickey,gssapi-with-mic,gssapi-keyex,hostbased",
                         b"-o", b"PasswordAuthentication=no"
                     ),
                     u"ansible_password/ansible_ssh_pass not set"
