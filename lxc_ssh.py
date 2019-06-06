@@ -226,7 +226,10 @@ class Connection(ConnectionBase):
         list ['-o', 'Foo=1', '-o', 'Bar=foo bar'] that can be added to
         the argument list. The list will not contain any empty elements.
         """
-        return [to_unicode(x.strip()) for x in shlex.split(to_bytes(argstring)) if x.strip()]
+        if sys.version_info[0] >= 3:
+            return [to_unicode(x.strip()) for x in shlex.split(to_bytes(argstring).decode()) if x.strip()]
+        else:
+            return [to_unicode(x.strip()) for x in shlex.split(to_bytes(argstring)) if x.strip()]
 
 
     if LooseVersion(ansible_version) < LooseVersion('2.3.0.0'):
@@ -556,7 +559,10 @@ class Connection(ConnectionBase):
         if isinstance(cmd, (text_type, binary_type)):
             cmd = to_bytes(cmd)
         else:
-            cmd = map(to_bytes, cmd)
+            if sys.version_info[0] >= 3:
+                cmd = list(map(to_bytes, cmd))
+            else:
+                cmd = map(to_bytes, cmd)
 
         if not in_data:
             try:
