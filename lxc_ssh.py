@@ -1241,8 +1241,13 @@ class Connection(ConnectionBase):
 
         if returncode != 0:
             raise AnsibleError("failed to transfer file from {0}:\n{1}\n{2}".format(in_path, stdout, stderr))
-        with open(out_path,'w') as out_f:
-            out_f.write(stdout)
+
+        if sys.version_info[0] >= 3:
+            with open(out_path,'wb') as out_f:
+                out_f.write(stdout)
+        else:
+            with open(out_path,'w') as out_f:
+                out_f.write(stdout)
 
         return (returncode, stdout, stderr)
 
