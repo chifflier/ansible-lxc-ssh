@@ -332,7 +332,7 @@ class Connection(ConnectionBase):
     # This is separate from _run() because we need to do the same thing for stdout
     # and stderr.
     def _examine_output(self, source, state, b_chunk, sudoable):
-            '''
+        '''
         Takes a string, extracts complete lines from it, tests to see if they
         are a prompt, error message, etc., and sets appropriate flags in self.
         Prompt and success lines are removed.
