@@ -739,30 +739,56 @@ class Connection(ConnectionBase):
         if not os.path.exists(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_native(in_path)))
 
-        with open(in_path,'r') as in_f:
-            in_data = in_f.read()
-            if (len(in_data) == 0):
-                # define a shortcut for empty files - nothing ro read so the ssh pipe will hang
-                cmd = ('touch %s; echo -n done' % pipes.quote(out_path))
-            else:
-                # regular command
-                cmd = ('cat > %s; echo -n done' % pipes.quote(out_path))
-            h = self.container_name
-            if (self.lxc_version == 2):
-                lxc_cmd = 'lxc exec %s --mode=non-interactive -- /bin/sh -c %s'  \
-                        % (pipes.quote(h),
-                           pipes.quote(cmd))
-            elif (self.lxc_version == 1):
-                lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
-                        % (pipes.quote(h),
-                           pipes.quote(cmd))
-            if in_data:
-                cmd = self._build_command(ssh_executable, self.host, lxc_cmd)
-            else:
-                cmd = self._build_command(ssh_executable, '-tt', self.host, lxc_cmd)
-            #self.ssh.exec_command(lxc_cmd,in_data,sudoable)
-            (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=False)
-            return (returncode, stdout, stderr)
+        if sys.version_info[0] >= 3:
+            with open(in_path,'rb') as in_f:
+                in_data = in_f.read()
+                if (len(in_data) == 0):
+                    # define a shortcut for empty files - nothing ro read so the ssh pipe will hang
+                    cmd = ('touch %s; echo -n done' % pipes.quote(out_path))
+                else:
+                    # regular command
+                    cmd = ('cat > %s; echo -n done' % pipes.quote(out_path))
+                h = self.container_name
+                if (self.lxc_version == 2):
+                    lxc_cmd = 'lxc exec %s --mode=non-interactive -- /bin/sh -c %s'  \
+                            % (pipes.quote(h),
+                               pipes.quote(cmd))
+                elif (self.lxc_version == 1):
+                    lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
+                            % (pipes.quote(h),
+                               pipes.quote(cmd))
+                if in_data:
+                    cmd = self._build_command(ssh_executable, self.host, lxc_cmd)
+                else:
+                    cmd = self._build_command(ssh_executable, '-tt', self.host, lxc_cmd)
+                #self.ssh.exec_command(lxc_cmd,in_data,sudoable)
+                (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=False)
+                return (returncode, stdout, stderr)
+        else:
+            with open(in_path,'r') as in_f:
+                in_data = in_f.read()
+                if (len(in_data) == 0):
+                    # define a shortcut for empty files - nothing ro read so the ssh pipe will hang
+                    cmd = ('touch %s; echo -n done' % pipes.quote(out_path))
+                else:
+                    # regular command
+                    cmd = ('cat > %s; echo -n done' % pipes.quote(out_path))
+                h = self.container_name
+                if (self.lxc_version == 2):
+                    lxc_cmd = 'lxc exec %s --mode=non-interactive -- /bin/sh -c %s'  \
+                            % (pipes.quote(h),
+                               pipes.quote(cmd))
+                elif (self.lxc_version == 1):
+                    lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
+                            % (pipes.quote(h),
+                               pipes.quote(cmd))
+                if in_data:
+                    cmd = self._build_command(ssh_executable, self.host, lxc_cmd)
+                else:
+                    cmd = self._build_command(ssh_executable, '-tt', self.host, lxc_cmd)
+                #self.ssh.exec_command(lxc_cmd,in_data,sudoable)
+                (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=False)
+                return (returncode, stdout, stderr)
 
 
     def fetch_file(self, in_path, out_path):
