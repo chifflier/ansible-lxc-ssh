@@ -1,0 +1,292 @@
+name: LXC ssh test
+
+# Run this workflow every time a new commit pushed to your repository
+on: 
+  push:
+    #branches: '**'
+    #branches-ignore: 'main'
+
+  pull_request:
+    #branches: '**'
+    #branches-ignore: 'main'
+
+  workflow_dispatch:
+
+
+defaults:
+  run:
+    shell: bash
+
+
+jobs:
+  pr-test:
+    name: Check the PR
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # also test 'latest', eventually this will be upgraded to a newer version and might fail early
+        #os: [ubuntu-18.04, ubuntu-20.04, ubuntu-latest]
+        os: [ubuntu-latest]
+        include:
+#          - os: ubuntu-18.04
+#            guest: 18.04
+#            guest-image: 18.04/amd64
+#          - os: ubuntu-20.04
+#            guest: 20.04
+#            guest-image: 20.04/amd64
+          - os: ubuntu-latest
+            guest: 20.04
+            guest-image: 20.04/amd64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+
+      # check Python syntax
+      - name: Python syntax check
+        run: python3 -m py_compile lxc_ssh.py
+
+
+      # prepare container with LXD installation
+      - name: Install LXD
+        run: sudo apt-get install -y lxd lxd-client lxd-tools iptables
+
+
+      # different LXD versions need different init steps
+      - name: Store LXD version
+        run: echo "::set-output name=LXD_Version::$(lxd --version)"
+        id: lxd_version
+
+      - name: Store LXD major version
+        run: echo "::set-output name=LXD_Major_Version::$(lxd --version | cut -f1 -d'.')"
+        id: lxd__major_version
+
+      - name: Output version
+        run: echo "${{ steps.lxd_version.outputs.LXD_Version }} - ${{ steps.lxd__major_version.outputs.LXD_Major_Version }}"
+
+      - name: Fail for unknown older versions
+        run: exit 1
+        if: steps.lxd__major_version.outputs.LXD_Major_Version < 3
+
+      - name: Fail for unknown newer versions
+        run: exit 1
+        if: steps.lxd__major_version.outputs.LXD_Major_Version > 4
+
+      - name: Init LXD version 3
+        run: sudo lxd init --preseed < $GITHUB_WORKSPACE/.github/resources/lxd3-init.yml
+        if: steps.lxd__major_version.outputs.LXD_Major_Version == 3
+
+      - name: Init LXD version 4
+        run: sudo lxd init --preseed < $GITHUB_WORKSPACE/.github/resources/lxd4-init.yml
+        if: steps.lxd__major_version.outputs.LXD_Major_Version == 4
+
+      - name: Show LXD status
+        run: sudo lxc profile show default
+
+      - name: Store IPv4 address for lxdbr0
+        run: echo "::set-output name=IP::$(ip -4 addr show lxdbr0 | grep inet | awk '{print $2}' | cut -d/ -f1)"
+        id: lxdbr0_ipv4
+
+      - name: Show lxdbr0 IP address
+        run: echo "${{ steps.lxdbr0_ipv4.outputs.IP }}"
+
+      - name: Create container-pool for LXD
+        run: sudo lxc storage create container-pool dir
+
+      - name: Remove default storage pool from LXD
+        run: sudo lxc profile device remove default root
+
+      - name: Attach container storage pool to default profile
+        run: sudo lxc profile device add default root disk path=/ pool=container-pool
+
+
+      # create an actual container, and configure it
+      - name: Create container
+        run: sudo lxc launch images:ubuntu/${{ matrix.guest }} test-container
+
+      - name: Wait for container to start
+        run: sleep 30
+
+      - name: Show container
+        run: sudo lxc list
+
+      - name: Debug
+        run: sudo lxc exec test-container -- ip -4 -o link show
+
+      - name: Store Container interface name
+        run: echo "::set-output name=IF::$(sudo lxc exec test-container -- ip -4 -o link show | awk '{print $2}' | cut -f1 -d':' | cut -f1 -d'@' | grep '^e[tn]')"
+        id: test_container_interface
+
+      - name: Store Container IPv4 address
+        run: echo "::set-output name=IPv4::$(sudo lxc exec test-container -- ip -o -4 addr show ${{ steps.test_container_interface.outputs.IF }} | awk '{print $4}' | cut -d/ -f1)"
+        id: test_container_ipv4
+
+      - name: Output container network data
+        run: echo "${{ steps.test_container_interface.outputs.IF }} - ${{ steps.test_container_ipv4.outputs.IPv4 }}"
+
+      - name: Fail if no network available
+        run: exit 1
+        if: steps.test_container_ipv4.outputs.IPv4 == ''
+
+#      - name: Ping test
+#        run: ping -4 -c 5 -n -v ${{ steps.test_container_ipv4.outputs.IPv4 }}
+
+      - name: Add container to /etc/hosts
+        run: ls -ld /etc/hosts
+
+      - name: Add container to /etc/hosts
+        run: echo -e "${{ steps.test_container_ipv4.outputs.IPv4 }}\ttest-container" | sudo tee -a /etc/hosts
+
+      - name: Show /etc/hosts
+        run: cat /etc/hosts
+
+
+      # create ssh key for root
+      - name: Create ssh directory for root
+        run: sudo mkdir -p /root/.ssh/
+
+      - name: Update permissions for ssh directory for root
+        run: sudo chmod 0700 /root/.ssh/
+
+      - name: Generate OpenSSH key for root
+        #run: sudo ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -v -N "" -P "" -C "root@host"
+        run: sudo ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519 -v -N "" -P "" -C "root@host"
+
+
+      # create ssh key for runner user
+      - name: Create ssh directory for runner user
+        run: mkdir -p $HOME/.ssh/
+
+      - name: Update permissions for ssh directory for runner user
+        run: chmod 0700 $HOME/.ssh/
+
+      - name: Generate OpenSSH key for runner user
+        #run: ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/id_rsa -v -N "" -P "" -C "home/runner@host"
+        run: ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -v -N "" -P "" -C "home/runner@host"
+
+
+      # install OpenSSH in container
+      - name: Install OpenSSH in container
+        run: sudo lxc exec test-container --env DEBIAN_FRONTEND=noninteractive -- apt-get -y install -y openssh-client openssh-server openssh-sftp-server
+
+      - name: OpenSSH create root .ssh directory in container
+        run: sudo lxc exec test-container -- mkdir -p /root/.ssh
+
+      - name: OpenSSH permissions of root .ssh directory in container
+        run: sudo lxc exec test-container -- chmod 0700 /root/.ssh
+
+      - name: OpenSSH create ubuntu .ssh directory in container
+        run: sudo lxc exec test-container -- mkdir -p /home/ubuntu/.ssh
+
+      - name: OpenSSH permissions of ubuntu .ssh directory in container
+        run: sudo lxc exec test-container -- chmod 0700 /home/ubuntu/.ssh
+
+
+      # install root and user ssh key in container for root and user
+      - name: OpenSSH push authorized_keys for root into container
+        #run: sudo lxc file push /root/.ssh/id_rsa.pub test-container/root/.ssh/authorized_keys
+        run: sudo lxc file push /root/.ssh/id_ed25519.pub test-container/root/.ssh/authorized_keys
+
+      - name: OpenSSH push authorized_keys for user into container
+        #run: sudo lxc file push $HOME/.ssh/id_rsa.pub test-container/tmp/authorized_keys.user
+        run: sudo lxc file push $HOME/.ssh/id_ed25519.pub test-container/tmp/authorized_keys.user
+
+      - name: OpenSSH add user key to root authorized_keys in container
+        #run: sudo lxc exec test-container -- bash -c "cat /tmp/authorized_keys.user | sudo tee -a /root/.ssh/authorized_keys"
+        run: sudo lxc exec test-container -- sudo bash -c "cat /tmp/authorized_keys.user >> /root/.ssh/authorized_keys"
+
+      - name: Install authorized_keys for ubuntu user in container
+        run: sudo lxc exec test-container -- cp -ai /root/.ssh/authorized_keys /home/ubuntu/.ssh
+
+      - name: OpenSSH ownership of ubuntu .ssh directory in container
+        run: sudo lxc exec test-container -- chown -R ubuntu. /home/ubuntu/.ssh
+
+
+      # update known_hosts for root
+      - name: Create /root/.ssh/known_hosts
+        run: sudo touch /root/.ssh/known_hosts
+
+      - name: Add container to known_hosts for root
+        run: sudo bash -c "ssh-keyscan -4 test-container >> /root/.ssh/known_hosts"
+
+      - name: Add container IP to known_hosts for root
+        run: sudo bash -c "ssh-keyscan -4 ${{ steps.test_container_ipv4.outputs.IPv4 }} >> /root/.ssh/known_hosts"
+
+
+      # update known_hosts for user
+      - name: Create /user/.ssh/known_hosts
+        run: touch $HOME/.ssh/known_hosts
+
+      - name: Add container to known_hosts for user
+        run: bash -c "ssh-keyscan -4 test-container >> $HOME/.ssh/known_hosts"
+
+      - name: Add container IP to known_hosts for user
+        run: bash -c "ssh-keyscan -4 ${{ steps.test_container_ipv4.outputs.IPv4 }} >> $HOME/.ssh/known_hosts"
+
+
+      # test ssh connection in all combinations
+      - name: Test ssh connection from root into root
+        run: sudo ssh -i /root/.ssh/id_ed25519 -o PreferredAuthentications=publickey -o PasswordAuthentication=no -l root ${{ steps.test_container_ipv4.outputs.IPv4 }} uptime
+
+      - name: Test ssh connection from root into ubuntu user
+        run: sudo ssh -i /root/.ssh/id_ed25519 -o PreferredAuthentications=publickey -o PasswordAuthentication=no -l ubuntu ${{ steps.test_container_ipv4.outputs.IPv4 }} uptime
+
+      - name: Test ssh connection from runner into root user
+        run: ssh -i $HOME/.ssh/id_ed25519 -o PreferredAuthentications=publickey -o PasswordAuthentication=no -l root ${{ steps.test_container_ipv4.outputs.IPv4 }} uptime
+
+      - name: Test ssh connection from runner into ubuntu user
+        run: ssh -i $HOME/.ssh/id_ed25519 -o PreferredAuthentications=publickey -o PasswordAuthentication=no -l ubuntu ${{ steps.test_container_ipv4.outputs.IPv4 }} uptime
+
+
+      # copy logfiles from container into log
+      - name: Show logfile in container
+        if: always()
+        run: sudo lxc exec test-container -- tail -n 500 /var/log/syslog
+
+      - name: Show logfile in container
+        if: always()
+        run: sudo lxc exec test-container -- tail -n 500 /var/log/auth.log
+
+#      - name: Stop
+#        run: exit 1
+
+      # install Python3 in container
+      - name: apt-get update
+        run: sudo lxc exec test-container --env DEBIAN_FRONTEND=noninteractive -- apt-get update
+
+      # don't upgrade the container to the latest software version
+      # should work out of the box for testing, and saves time
+      #- name: apt-get dist-upgrade
+      #  run: sudo lxc exec test-container --env DEBIAN_FRONTEND=noninteractive -- apt-get dist-upgrade -y
+
+      - name: Python3
+        run: sudo lxc exec test-container --env DEBIAN_FRONTEND=noninteractive -- apt-get -y install -y python3
+
+
+      # container is ready
+
+      # install Ansible
+      - name: Install Ansible
+        run: sudo apt-get install -y ansible
+
+      - name: Install plugin for tests
+        run: cp -af $GITHUB_WORKSPACE/lxc_ssh.py $GITHUB_WORKSPACE/tests/connection_plugins/lxc_ssh.py
+
+      - name: Create empty for tests
+        run: touch $GITHUB_WORKSPACE/tests/test_empty.txt
+
+      - name: Create a 1000 Bytes file for tests
+        run: dd if=/dev/urandom of=$GITHUB_WORKSPACE/tests/test_1000b.txt bs=1KB count=1
+
+      - name: Create a 5MB file for tests
+        run: dd if=/dev/urandom of=$GITHUB_WORKSPACE/tests/test_5mb.txt bs=5MB count=1
+
+      - name: Create a 50MB file for tests
+        run: dd if=/dev/urandom of=$GITHUB_WORKSPACE/tests/test_50mb.txt bs=50MB count=1
+
+      - name: Show test directory
+        run: bash -c "ls -ld $GITHUB_WORKSPACE/tests/*"
+
+      - name: Run test
+        run: ANSIBLE_CONFIG=$GITHUB_WORKSPACE/tests/ cd tests && ansible-playbook -i ${{ steps.test_container_ipv4.outputs.IPv4 }}, $GITHUB_WORKSPACE/tests/test-lxc_ssh.yml

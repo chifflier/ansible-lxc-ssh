@@ -1,0 +1,83 @@
+---
+
+- name: Template the file locally
+  local_action:
+    module: template
+    src: "{{ filename }}.j2"
+    dest: "{{ filename }}_local.txt"
+
+- name: Template file into test container
+  template:
+    src: "{{ filename }}.j2"
+    dest: "/tmp/{{ filename }}_template.txt"
+
+- name: fetch file back from test container
+  fetch:
+    src: "/tmp/{{ filename }}_template.txt"
+    dest: "/tmp/{{ filename }}_fetch.txt"
+    flat: yes
+    fail_on_missing: yes
+
+- name: Stat locally templated file
+  local_action:
+    module: stat
+    path: "{{ filename }}_local.txt"
+    checksum_algorithm: md5
+  changed_when: False
+  run_once: true
+  become: no
+  register: stat_source_file
+
+- name: Stat fetched file
+  local_action:
+    module: stat
+    path: "/tmp/{{ filename }}_fetch.txt"
+    checksum_algorithm: md5
+  changed_when: False
+  run_once: true
+  become: no
+  register: stat_fetch_file
+
+- name: Debug locally templated file
+  debug:
+    msg: "{{ stat_source_file }}"
+
+- name: Debug fetched file
+  debug:
+    msg: "{{ stat_fetch_file }}"
+
+- name: Remove destination file
+  file:
+    path: "/tmp/{{ filename }}_template.txt"
+    state: absent
+
+- name: Remove fetched file
+  local_action:
+    module: file
+    path: "/tmp/{{ filename }}_fetch.txt"
+    state: absent
+  run_once: true
+  become: no
+
+- name: Remove local templated file
+  local_action:
+    module: file
+    path: "/tmp/{{ filename }}_template.txt"
+    state: absent
+  run_once: true
+  become: no
+
+- name: Fail if fetched file does not exist
+  fail:
+    msg: "Fetched file does not exist ({{ filename }}_fetch.txt)"
+  when: stat_fetch_file.stat.exists == False
+
+- name: Fail if size differs
+  fail:
+    msg: "Size of fetched file differs ({{ filename }}_fetch.txt)"
+  when: stat_source_file.stat.size != stat_fetch_file.stat.size
+
+- name: Fail if checksum differs
+  fail:
+    msg: "Checksum of fetched file differs ({{ filename }}_fetch.txt)"
+  when: stat_source_file.stat.checksum != stat_fetch_file.stat.checksum

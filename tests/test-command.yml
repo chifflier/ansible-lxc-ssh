@@ -1,0 +1,13 @@
+---
+
+- name: Run command in container
+  command:
+    cmd: whoami
+  register: command_output
+
+- debug: msg="{{ command_output }}"
+
+- name: Verify output
+  fail:
+    msg: "Not the expected ({{ expect_user }}) output ({{ command_output.stdout }})!"
+  when: command_output.stdout != expect_user
