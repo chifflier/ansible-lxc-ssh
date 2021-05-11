@@ -26,7 +26,7 @@ connection_plugins = /path/to/connection_plugins/lxc_ssh
 
 Then, modify your `hosts` file to use the `lxc_ssh` transport:
 ```
-container ansible_host=server ansible_connection=lxc_ssh ansible_ssh_extra_args=container
+container ansible_host=server ansible_connection=lxc_ssh lxc_host=container
 ```
 
 
@@ -47,7 +47,7 @@ The following is an extract from a Playbook which creates a container. First the
 
 ```
 [containers]
-web ansible_host=physical.host ansible_ssh_extra_args=web
+web ansible_host=physical.host lxc_host=web
 ```
 
 The Playbook:
@@ -83,9 +83,3 @@ The Playbook:
 ```
 
 The actual container creation is redirected to the `ansible_host`, also fact gathering is turned off because the container is not yet live. It might be a good idea to create the containers one by one, hence the serialization. In my case I also setup ssh access and hostname resolution during the container setup - this does not work well when run in parallel for multiple containers.
-
-
-## notes
-
-*     I haven't found any proper method to access the 'inventory_name' from the connection plugin, so I used 'ansible_ssh_extra_args' to store the name of the container.
-
