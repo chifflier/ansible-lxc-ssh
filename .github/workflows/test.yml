@@ -23,13 +23,12 @@ jobs:
     name: Check the PR
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         # also test 'latest', eventually this will be upgraded to a newer version and might fail early
-        os: [ubuntu-18.04, ubuntu-20.04, ubuntu-latest]
+        os: [ubuntu-20.04, ubuntu-latest]
+        ansible: ["stable-2.9", "stable-2.10", "stable-2.11", "devel"]
         include:
-          - os: ubuntu-18.04
-            guest: 18.04
-            guest-image: 18.04/amd64
           - os: ubuntu-20.04
             guest: 20.04
             guest-image: 20.04/amd64
@@ -266,13 +265,16 @@ jobs:
       # container is ready
 
       # install Ansible
-      - name: Install Ansible
-        run: sudo apt-get install -y ansible
+      - name: Install requested Ansible version using pip
+        run: python -m pip install --user https://github.com/ansible/ansible/archive/${{ matrix.ansible }}.tar.gz
+
+      - name: Show Ansible version
+        run: ansible --version
 
       - name: Install plugin for tests
         run: cp -af $GITHUB_WORKSPACE/lxc_ssh.py $GITHUB_WORKSPACE/tests/connection_plugins/lxc_ssh.py
 
-      - name: Create empty for tests
+      - name: Create empty file for tests
         run: touch $GITHUB_WORKSPACE/tests/test_empty.txt
 
       - name: Create a 1000 Bytes file for tests
