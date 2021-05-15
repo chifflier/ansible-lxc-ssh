@@ -28,6 +28,7 @@ import pty
 import shlex
 import subprocess
 import sys
+import time
 
 from ansible.release import __version__ as ansible_version
 from functools import wraps
