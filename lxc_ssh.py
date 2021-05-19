@@ -759,7 +759,7 @@ class Connection(ConnectionBase):
                     b"KbdInteractiveAuthentication=no",
                     b"-o",
                     b"PreferredAuthentications=publickey,gssapi-with-mic,"
-                    "gssapi-keyex,hostbased",
+                    b"gssapi-keyex,hostbased",
                     b"-o",
                     b"PasswordAuthentication=no",
                 ),
