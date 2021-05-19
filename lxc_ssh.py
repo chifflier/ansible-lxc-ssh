@@ -865,8 +865,7 @@ class Connection(ConnectionBase):
         except (OSError, IOError):
             raise AnsibleConnectionFailure(
                 'SSH Error: data could not be sent to remote host "%s". '
-                'Make sure this host can be reached over ssh'
-                % self.host
+                "Make sure this host can be reached over ssh" % self.host
             )
 
         display.debug("Sent initial data (%d bytes)" % len(in_data))
@@ -1122,8 +1121,7 @@ class Connection(ConnectionBase):
                         self._terminate_process(p)
                         raise AnsibleError(
                             "Timeout (%ds) waiting for privilege escalation "
-                            " prompt: %s"
-                            % (timeout, to_native(b_stdout))
+                            " prompt: %s" % (timeout, to_native(b_stdout))
                         )
 
                 # Read whatever output is available on stdout and stderr,
@@ -1290,10 +1288,10 @@ class Connection(ConnectionBase):
         )
         if p.returncode != 0 and controlpersisterror:
             raise AnsibleError(
-                'using -c ssh on certain older ssh versions may not support '
+                "using -c ssh on certain older ssh versions may not support "
                 ' ControlPersist, set ANSIBLE_SSH_ARGS="" '
-                '(or ssh_args in [ssh_connection] section of the config file) '
-                'before running again'
+                "(or ssh_args in [ssh_connection] section of the config file) "
+                "before running again"
             )
 
         # If we find a broken pipe because of ControlPersist timeout expiring
@@ -1311,8 +1309,7 @@ class Connection(ConnectionBase):
         if p.returncode == 255 and in_data and checkrc:
             raise AnsibleConnectionFailure(
                 'SSH Error: data could not be sent to remote host "%s". '
-                'Make sure this host can be reached over ssh'
-                % self.host
+                "Make sure this host can be reached over ssh" % self.host
             )
 
         return (p.returncode, b_stdout, b_stderr)
