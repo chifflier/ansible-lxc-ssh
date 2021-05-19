@@ -390,7 +390,6 @@ except ImportError:
     display = Display()
 
 
-# only used from Ansible version 2.3 on forward
 class AnsibleControlPersistBrokenPipeError(AnsibleError):
     """ControlPersist broken pipe"""
 
@@ -478,8 +477,6 @@ class Connection(ConnectionBase):
     transport = "lxc_ssh"
 
     def __init__(self, play_context, new_stdin, *args, **kwargs):
-        # print args
-        # print kwargs
         super(Connection, self).__init__(play_context, new_stdin, *args, **kwargs)
         self.host = self._play_context.remote_addr
         self.port = self._play_context.port
@@ -490,7 +487,9 @@ class Connection(ConnectionBase):
 
         # LXC v1 uses 'lxc-info', 'lxc-attach' and so on
         # LXC v2 uses just 'lxc'
-        (returncode2, stdout2, stderr2) = self._exec_command("which lxc", None, False)
+        (returncode2, stdout2, stderr2) = self._exec_command(
+            "which lxc", None, False
+        )
         (returncode1, stdout1, stderr1) = self._exec_command(
             "which lxc-info", None, False
         )
@@ -513,7 +512,6 @@ class Connection(ConnectionBase):
         super(Connection, self)._connect()
         self.container_name = self.get_option("lxc_host")
 
-    # only used from Ansible version 2.3 on forward
     @staticmethod
     def _create_control_path(host, port, user, connection=None):
         """Make a hash for the controlpath based on con attributes"""
@@ -874,7 +872,6 @@ class Connection(ConnectionBase):
 
         return b"".join(output), remainder
 
-    # only used from Ansible version 2.3 on forward
     def _bare_run(self, cmd, in_data, sudoable=True, checkrc=True):
         """
         Starts the command and communicates with it until it ends.
@@ -1269,13 +1266,6 @@ class Connection(ConnectionBase):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
         ssh_executable = self.get_option("ssh_executable")
-        ##print(dir(self))
-        ##print dir(self._play_context)
-        ##print self._play_context._attributes
-        # self.dir_print(self._play_context)
-        # vm = self._play_context.get_ds()
-        # print( vm )
-        # raise "blah"
         h = self.container_name
         if self.lxc_version == 2:
             lxc_cmd = "lxc exec %s --mode=non-interactive -- /bin/sh -c %s" % (
@@ -1291,7 +1281,6 @@ class Connection(ConnectionBase):
             cmd = self._build_command(ssh_executable, "ssh", self.host, lxc_cmd)
         else:
             cmd = self._build_command(ssh_executable, "ssh", "-tt", self.host, lxc_cmd)
-        # self.ssh.exec_command(lxc_cmd,in_data,sudoable)
         (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=sudoable)
         return (returncode, stdout, stderr)
 
@@ -1332,7 +1321,6 @@ class Connection(ConnectionBase):
                     cmd = self._build_command(
                         ssh_executable, "ssh", "-tt", self.host, lxc_cmd
                     )
-                # self.ssh.exec_command(lxc_cmd,in_data,sudoable)
                 (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=False)
                 return (returncode, stdout, stderr)
         else:
@@ -1361,7 +1349,6 @@ class Connection(ConnectionBase):
                     cmd = self._build_command(
                         ssh_executable, "ssh", "-tt", self.host, lxc_cmd
                     )
-                # self.ssh.exec_command(lxc_cmd,in_data,sudoable)
                 (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=False)
                 return (returncode, stdout, stderr)
 
@@ -1403,7 +1390,6 @@ class Connection(ConnectionBase):
 
         return (returncode, stdout, stderr)
 
-    # only used from Ansible version 2.3 on forward
     def reset(self):
         # If we have a persistent ssh connection (ControlPersist), we can ask it to stop listening.
         cmd = self._build_command(
