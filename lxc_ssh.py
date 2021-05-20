@@ -1318,7 +1318,7 @@ class Connection(ConnectionBase):
             try:
                 attr_value = getattr(obj, attr_name)
                 print(attr_name, attr_value, callable(attr_value))
-            except:
+            except AttributeError:
                 pass
 
     #
