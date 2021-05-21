@@ -1,6 +1,13 @@
 # ansible-lxc-ssh
 Ansible connection plugin using ssh + lxc-attach
 
+![GitHub Workflow Status](https://github.com/andreasscherbaum/ansible-lxc-ssh/actions/workflows/test.yml/badge.svg)
+![GitHub Workflow Status](https://github.com/andreasscherbaum/ansible-lxc-ssh/actions/workflows/black.yml/badge.svg)
+
+[![GitHub Open Issues](https://img.shields.io/github/issues/andreasscherbaum/ansible-lxc-ssh.svg)](https://github.com/andreasscherbaum/ansible-lxc-ssh/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/andreasscherbaum/ansible-lxc-ssh.svg)](https://github.com/andreasscherbaum/ansible-lxc-ssh)
+[![GitHub Forks](https://img.shields.io/github/forks/andreasscherbaum/ansible-lxc-ssh.svg)](https://github.com/andreasscherbaum/ansible-lxc-ssh)
+
 ## Description
 
 This plugin allows to use Ansible on a remote server hosting LXC containers,
