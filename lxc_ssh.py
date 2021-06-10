@@ -719,7 +719,7 @@ class Connection(ConnectionBase):
                 "ANSIBLE_REMOTE_PORT/remote_port/ansible_port set",
             )
 
-        key = self.get_option("private_key_file")
+        key = self._play_context.private_key_file
         if key:
             b_args = (
                 b"-o",
@@ -749,7 +749,8 @@ class Connection(ConnectionBase):
                 "ansible_password/ansible_ssh_password not set",
             )
 
-        self.user = self.get_option("remote_user")
+        self.user = self._play_context.remote_user
+
         if self.user:
             self._add_args(
                 b_command,
