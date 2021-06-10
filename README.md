@@ -36,6 +36,7 @@ Then, modify your `hosts` file to use the `lxc_ssh` transport:
 container ansible_host=server ansible_connection=lxc_ssh lxc_host=container
 ```
 
+`lxc_container=container` also works for setting the LXC container name.
 
 ## Fork
 
