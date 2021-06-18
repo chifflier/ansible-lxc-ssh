@@ -690,7 +690,7 @@ class Connection(ConnectionBase):
                 to_bytes(a, errors="surrogate_or_strict")
                 for a in self._split_ssh_args(ssh_args)
             ]
-            self._add_args(b_command, b_args, "ansible.cfg set ssh_args")
+            self._add_args(b_command, b_args, u"ansible.cfg set ssh_args")
 
         # Now we add various arguments that have their own specific settings
         # defined in docs above.
