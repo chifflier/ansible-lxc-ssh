@@ -517,8 +517,8 @@ class Connection(ConnectionBase):
         self.user = self._play_context.remote_user
         self.control_path = None
         self.control_path_dir = None
-        self.lxc_version = None
 
+    def _set_version(self):
         # LXC v1 uses 'lxc-info', 'lxc-attach' and so on
         # LXC v2 uses just 'lxc'
         (returncode2, stdout2, stderr2) = self._exec_command("which lxc", None, False)
@@ -534,6 +534,10 @@ class Connection(ConnectionBase):
         else:
             raise AnsibleConnectionFailure("Cannot identify LXC version")
             sys.exit(1)
+
+    def set_options(self, *args, **kwargs):
+        super(Connection, self).set_options(*args, **kwargs)
+        self._set_version()
 
     # The connection is created by running ssh/scp/sftp from the exec_command,
     # put_file, and fetch_file methods, so we don't need to do any connection
