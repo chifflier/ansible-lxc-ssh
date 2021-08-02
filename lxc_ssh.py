@@ -402,13 +402,18 @@ DOCUMENTATION = """
             The lxc host to connect to.
         env:
             - name: LXC_HOST
+            - name: LXC_CONTAINER
         ini:
             - key: lxc_host
               section: lxc_ssh_connection
+            - key: lxc_container
+              section: lxc_ssh_connection
         vars:
           - name: lxc_host
+          - name: lxc_container
         cli:
           - name: lxc_host
+          - name: lxc_container
 """
 
 
