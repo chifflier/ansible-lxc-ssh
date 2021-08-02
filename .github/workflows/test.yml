@@ -19,8 +19,8 @@ defaults:
 
 
 jobs:
-  pr-test:
-    name: Check the PR
+  pr-test-ubuntu-user:
+    name: Check the PR (ubuntu user)
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -100,11 +100,12 @@ jobs:
 
 
       # create an actual container, and configure it
+      # Enable container nesting
       - name: Create container
-        run: sudo lxc launch images:ubuntu/${{ matrix.guest }} test-container
+        run: sudo lxc launch images:ubuntu/${{ matrix.guest }} test-container -c security.nesting=true
 
       - name: Wait for container to start
-        run: sleep 30
+        run: sleep 10
 
       - name: Show container
         run: sudo lxc list
@@ -261,6 +262,9 @@ jobs:
       - name: Python3
         run: sudo lxc exec test-container --env DEBIAN_FRONTEND=noninteractive -- apt-get -y install -y python3
 
+      # Install LXD inside cotnainer its missing inside container
+      - name: Install LXD inside container
+        run: sudo lxc exec test-container --env DEBIAN_FRONTEND=noninteractive -- sudo apt-get install -y lxd lxd-client lxd-tools iptables
 
       # container is ready
 
@@ -289,5 +293,35 @@ jobs:
       - name: Show test directory
         run: bash -c "ls -ld $GITHUB_WORKSPACE/tests/*"
 
+      # nested LXD configuration
+      - name: Init LXD inside container
+        run: sudo lxc exec test-container -- sudo lxd init --preseed < $GITHUB_WORKSPACE/.github/resources/lxd4-init.yml
+
+      # Create a nested container for lxc_ssh tests
+      - name: Create a nested container
+        run: sudo lxc exec test-container -- sudo lxc launch images:ubuntu/${{ matrix.guest }} nested-container
+
+      - name: add container user to lxd group
+        run: sudo lxc exec test-container -- sudo adduser ubuntu lxd
+
+      - name: Wait for container to start
+        run: sleep 10
+
+      - name: Generate ansible inventory
+        run: |
+          cat <<EOF > $GITHUB_WORKSPACE/tests/inventory.yml
+          ---
+          all:
+            hosts:
+              testhost:
+                ansible_host: ${{ steps.test_container_ipv4.outputs.IPv4 }}
+                ansible_ssh_user: 'ubuntu'
+                lxc_host: "nested-container"
+                ansible_connection: lxc_ssh
+          EOF
+
+      - name: Show inventory file
+        run: cat $GITHUB_WORKSPACE/tests/inventory.yml
+
       - name: Run test
-        run: ANSIBLE_CONFIG=$GITHUB_WORKSPACE/tests/ cd tests && ansible-playbook -i ${{ steps.test_container_ipv4.outputs.IPv4 }}, $GITHUB_WORKSPACE/tests/test-lxc_ssh.yml
+        run: ANSIBLE_CONFIG=$GITHUB_WORKSPACE/tests/ cd tests && ansible-playbook -i $GITHUB_WORKSPACE/tests/inventory.yml $GITHUB_WORKSPACE/tests/test-lxc_ssh.yml
