@@ -268,6 +268,7 @@ DOCUMENTATION = """
           cli:
             - name: user
       pipelining:
+          description: Enable ssh pipelining.
           env:
             - name: ANSIBLE_PIPELINING
             - name: ANSIBLE_SSH_PIPELINING
@@ -279,7 +280,6 @@ DOCUMENTATION = """
           vars:
             - name: ansible_pipelining
             - name: ansible_ssh_pipelining
-
       private_key_file:
           description:
               - Path to private key file to use for authentication
@@ -293,7 +293,6 @@ DOCUMENTATION = """
             - name: ansible_ssh_private_key_file
           cli:
             - name: private_key_file
-
       control_path:
         description:
           - This is the location to save ssh's ControlPath sockets, it uses
